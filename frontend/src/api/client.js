@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const client = axios.create({
-    baseURL: 'http://localhost:5000/api', // Adjust if backend port differs
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -35,7 +35,11 @@ client.interceptors.response.use(
                 const token = localStorage.getItem('token');
                 // Only try refresh if we actually had a token (avoid infinite loops on public pages)
                 if (token) {
-                    const response = await axios.post('http://localhost:5000/api/auth/refresh', { token });
+                    const response = await axios.post(
+                        `${import.meta.env.VITE_API_BASE_URL}/api/auth/refresh`,
+                        { token }
+                    );
+
                     if (response.data && response.data.token) {
                         localStorage.setItem('token', response.data.token);
 
