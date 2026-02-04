@@ -30,6 +30,13 @@ const About = () => {
                     <p className="text-sm">Transparent and affordable plans for every budget.</p>
                 </div>
             </div>
+
+            <div className="mt-16 pt-8 border-t border-gray-100 text-center">
+                <h4 className="text-lg font-medium text-gray-800 mb-2">From the Developer</h4>
+                <p className="text-gray-500 italic max-w-2xl mx-auto">
+                    "Developer – Yaqoob Ahmed. Glad to share this platform with you and hope it helps local businesses grow."
+                </p>
+            </div>
         </div>
     );
 };

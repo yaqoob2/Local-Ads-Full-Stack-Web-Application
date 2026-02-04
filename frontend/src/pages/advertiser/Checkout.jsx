@@ -189,10 +189,12 @@ const Checkout = () => {
                                         />
                                         <input
                                             name="cvv"
+                                            type="password"
                                             placeholder="CVV"
                                             value={newCardData.cvv}
                                             onChange={handleNewCardChange}
                                             className="w-full p-2 border rounded text-sm"
+                                            maxLength="4"
                                             required
                                         />
                                     </div>

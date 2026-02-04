@@ -62,9 +62,9 @@ const SponsoredSpotlight = ({ ads = [] }) => {
                 {/* Background decorative elements */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
 
-                <div className="relative z-10 h-full flex flex-col justify-center px-6 md:px-10 py-6 text-white">
+                <div className="relative z-10 h-full flex flex-col justify-center px-4 md:px-10 py-4 md:py-6 text-white">
                     {/* Top Badges */}
-                    <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center gap-3 mb-2 md:mb-3">
                         <span className="bg-white/20 backdrop-blur-md text-white text-[10px] md:text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider border border-white/20">
                             Sponsored
                         </span>
@@ -74,13 +74,13 @@ const SponsoredSpotlight = ({ ads = [] }) => {
                     </div>
 
                     {/* Content */}
-                    <h2 className="text-2xl md:text-4xl font-black mb-2 leading-tight line-clamp-2 md:line-clamp-1">
+                    <h2 className="text-lg sm:text-2xl md:text-4xl font-black mb-1 md:mb-2 leading-tight line-clamp-2 md:line-clamp-1 pr-12 md:pr-0">
                         {headline}
                     </h2>
-                    <p className="text-blue-100 text-sm md:text-base font-medium mb-1 line-clamp-1">
+                    <p className="text-blue-100 text-xs sm:text-sm md:text-base font-medium mb-1 line-clamp-1">
                         {subtext}
                     </p>
-                    <p className="text-white/70 text-xs md:text-sm font-medium flex items-center">
+                    <p className="text-white/70 text-[10px] sm:text-xs md:text-sm font-medium flex items-center">
                         <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         {locationStr}
                     </p>

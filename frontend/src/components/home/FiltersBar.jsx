@@ -14,7 +14,7 @@ const FiltersBar = ({ filters, onFilterChange, categories = [], onUseLocation })
                         className="w-full h-12 px-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:text-white transition-colors"
                     >
                         <option value="">All Categories</option>
-                        {[...categories].sort((a, b) => a.name.localeCompare(b.name)).map((cat) => (
+                        {[...categories].sort((a, b) => (a?.name || "").localeCompare(b?.name || "")).map((cat) => (
                             <option key={cat._id} value={cat.name}>{cat.name}</option>
                         ))}
                     </select>

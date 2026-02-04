@@ -58,7 +58,7 @@ const Home = () => {
                 // Handle different return structures if API changed, assuming returns array
                 const allAds = Array.isArray(data) ? data : (data.ads || []);
 
-                setCategories(cats);
+                setCategories(Array.isArray(cats) ? cats.filter(c => c && c._id && c.name) : []);
                 setAds(allAds);
                 setFilteredAds(allAds);
 
@@ -201,7 +201,7 @@ const Home = () => {
             />
 
             <CategoryChips
-                categories={[...categories].sort((a, b) => a.name.localeCompare(b.name))}
+                categories={[...categories].sort((a, b) => (a?.name || "").localeCompare(b?.name || ""))}
                 selectedCategory={filters.category}
                 onSelectCategory={(cat) => handleFilterChange('category', cat)}
             />

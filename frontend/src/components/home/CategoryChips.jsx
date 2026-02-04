@@ -3,7 +3,7 @@ import React from 'react';
 const CategoryChips = ({ categories = [], selectedCategory, onSelectCategory }) => {
     // Helper to get icon based on category name
     const getCategoryIcon = (name) => {
-        const lowerName = name.toLowerCase();
+        const lowerName = (name || "").toLowerCase();
         if (lowerName.includes('ac') || lowerName.includes('cool')) return '❄️';
         if (lowerName.includes('appliance') || lowerName.includes('repair')) return '🛠️';
         if (lowerName.includes('baby') || lowerName.includes('child')) return '🍼';

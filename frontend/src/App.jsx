@@ -19,6 +19,9 @@ import AdminUsers from './pages/admin/AdminUsers';
 import PaymentMethods from './pages/advertiser/PaymentMethods';
 import Checkout from './pages/advertiser/Checkout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import PrivacyPolicy from './pages/public/PrivacyPolicy';
+import TermsConditions from './pages/public/TermsConditions';
+import UserProfile from './pages/public/UserProfile';
 
 // Placeholder for other routes
 const NotFound = () => <div className="p-10 text-center text-red-500 font-bold">404 - Page Not Found</div>;
@@ -37,6 +40,14 @@ function App() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsConditions />} />
+
+          {/* Protected Profile Route */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/profile" element={<UserProfile />} />
+          </Route>
+
           <Route path="/ads/:id" element={<AdDetails />} />
           <Route path="/templates" element={<TemplatePreview />} />
 
