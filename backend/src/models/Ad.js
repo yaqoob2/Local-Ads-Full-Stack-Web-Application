@@ -55,6 +55,35 @@ const adSchema = mongoose.Schema(
         rejectionReason: {
             type: String,
         },
+        // Payment Integration Fields
+        paymentStatus: {
+            type: String,
+            enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+            default: 'PENDING',
+        },
+        tapChargeId: {
+            type: String,
+        },
+        stripeSessionId: {
+            type: String,
+        },
+        stripePaymentIntentId: {
+            type: String,
+        },
+        amount: {
+            type: Number,
+        },
+        currency: {
+            type: String,
+            default: 'BHD', // Default to BHD (Bahraini Dinar) or your preferred currency
+        },
+        published: {
+            type: Boolean,
+            default: false,
+        },
+        paidAt: {
+            type: Date,
+        },
     },
     {
         timestamps: true,

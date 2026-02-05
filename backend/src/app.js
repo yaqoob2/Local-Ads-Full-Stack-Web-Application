@@ -17,6 +17,9 @@ const locationRoutes = require('./routes/location.routes');
 
 const app = express();
 
+// Stripe Webhook (Must be before express.json() for raw body)
+app.use('/api/webhook', require('./routes/webhook.routes'));
+
 // Middleware
 app.use(express.json());
 app.use(cors());

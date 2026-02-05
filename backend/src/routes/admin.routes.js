@@ -6,7 +6,9 @@ const {
     getPendingAds,
     updateAdStatus,
     banUser,
-    activateSubscription
+    activateSubscription,
+    getAllSubscriptionsAdmin,
+    getAdminDashboardStats
 } = require('../controllers/admin.controller');
 const { protect } = require('../middleware/auth');
 const { adminOnly } = require('../middleware/adminOnly');
@@ -134,5 +136,27 @@ router.put('/users/:id/ban', protect, adminOnly, banUser);
  *         description: Subscription activated
  */
 router.post('/subscriptions/activate', protect, adminOnly, activateSubscription);
+
+/**
+ * @swagger
+ * /api/admin/subscriptions:
+ *   get:
+ *     summary: Get all user subscriptions
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/subscriptions', protect, adminOnly, getAllSubscriptionsAdmin);
+
+/**
+ * @swagger
+ * /api/admin/stats:
+ *   get:
+ *     summary: Get dashboard money KPIs
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/stats', protect, adminOnly, getAdminDashboardStats);
 
 module.exports = router;

@@ -15,7 +15,7 @@ const createAd = async (req, res) => {
         endDate: { $gt: new Date() }
     }).populate('plan');
 
-    let maxAds = 2; // Default for free/no plan (Increased to 2)
+    let maxAds = 1; // Default for free/no plan (matches Starter)
     if (activeSub && activeSub.plan) {
         maxAds = activeSub.plan.maxActiveAds;
     }

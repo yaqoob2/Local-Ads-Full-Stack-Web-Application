@@ -106,7 +106,115 @@ const banUser = async (req, res) => {
     }
 };
 
+// @desc    Get all subscriptions for admin oversight
+// @route   GET /api/admin/subscriptions
+// @access  Private/Admin
+const getAllSubscriptionsAdmin = async (req, res) => {
+    const subscriptions = await Subscription.find({})
+        .populate('user', 'username email phone')
+        .populate('plan', 'name price durationInDays')
+        .sort({ createdAt: -1 });
+    res.json(subscriptions);
+};
 
+// @desc    Get Admin Dashboard Stats (KPIs)
+// @route   GET /api/admin/stats
+// @access  Private/Admin
+const getAdminDashboardStats = async (req, res) => {
+    try {
+        const now = new Date();
+        const todayStart = new Date(now.setHours(0, 0, 0, 0)).getTime();
+        const sevenDaysAgo = todayStart - 7 * 24 * 60 * 60 * 1000;
+        const thirtyDaysAgo = todayStart - 30 * 24 * 60 * 60 * 1000;
+
+        // Plan Prices for Fallback (Use strings or any casing found in DB)
+        const planPrices = {
+            'BASIC': 0, 'basic': 0,
+            'GROWTH': 30, 'growth': 30,
+            'BUSINESS': 100, 'business': 100
+        };
+
+        const allAds = await Ad.find({});
+        const allSubs = await Subscription.find({ status: 'ACTIVE' }).populate('plan');
+
+        // Helper to get ad value robustly
+        const getAdVal = (ad) => {
+            if (ad.amount) return ad.amount;
+            const level = (ad.planLevel || ad.plan || 'BASIC').toUpperCase();
+            return planPrices[level] || 0;
+        };
+
+        // Categorize Ads
+        const paidAds = allAds.filter(ad => {
+            const isPaid = ad.paymentStatus === 'PAID';
+            const isHigh = ['GROWTH', 'BUSINESS'].includes((ad.planLevel || ad.plan || '').toUpperCase());
+            const isActive = ad.status?.toLowerCase() === 'active';
+            return isPaid || (isHigh && isActive);
+        });
+
+        const freeAds = allAds.filter(ad => {
+            const isBasic = (ad.planLevel || ad.plan || 'BASIC').toUpperCase() === 'BASIC';
+            const isActive = ad.status?.toLowerCase() === 'active';
+            return isBasic && isActive;
+        });
+
+        // REVENUE CALCULATION
+        let adRevTotal = 0;
+        let adRevToday = 0;
+        let adRev7d = 0;
+        let adRev30d = 0;
+
+        paidAds.forEach(ad => {
+            const val = getAdVal(ad);
+            const ts = new Date(ad.paidAt || ad.createdAt).getTime();
+            adRevTotal += val;
+            if (ts >= todayStart) adRevToday += val;
+            if (ts >= sevenDaysAgo) adRev7d += val;
+            if (ts >= thirtyDaysAgo) adRev30d += val;
+        });
+
+        let subRevTotal = 0;
+        let subRevToday = 0;
+        let subRev7d = 0;
+        let subRev30d = 0;
+
+        allSubs.forEach(sub => {
+            const val = sub.plan?.price || 0;
+            const ts = new Date(sub.createdAt).getTime();
+            subRevTotal += val;
+            if (ts >= todayStart) subRevToday += val;
+            if (ts >= sevenDaysAgo) subRev7d += val;
+            if (ts >= thirtyDaysAgo) subRev30d += val;
+        });
+
+        const totalRevenue = adRevTotal + subRevTotal;
+        const revenueToday = adRevToday + subRevToday;
+        const revenue7d = adRev7d + subRev7d;
+        const revenue30d = adRev30d + subRev30d;
+
+        // ARPA should be Total Platform Revenue / Total Ads
+        const arpa = allAds.length > 0 ? (totalRevenue / allAds.length).toFixed(2) : 0;
+
+        res.json({
+            revenue: {
+                total: totalRevenue,
+                today: revenueToday,
+                last7Days: revenue7d,
+                last30Days: revenue30d
+            },
+            ads: {
+                paid: paidAds.length,
+                free: freeAds.length,
+                total: allAds.length,
+                failedPayments: allAds.filter(a => a.paymentStatus === 'FAILED').length
+            },
+            arpa: arpa.toString()
+        });
+    } catch (err) {
+        console.error('Stats Error:', err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
 
 module.exports = {
     getUsers,
@@ -114,5 +222,7 @@ module.exports = {
     getPendingAds,
     updateAdStatus,
     banUser,
-    activateSubscription
+    activateSubscription,
+    getAllSubscriptionsAdmin,
+    getAdminDashboardStats
 };

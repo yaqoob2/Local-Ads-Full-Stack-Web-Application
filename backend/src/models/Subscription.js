@@ -28,9 +28,15 @@ const subscriptionSchema = mongoose.Schema(
         paymentId: {
             type: String,
         },
+        stripeSessionId: {
+            type: String,
+        },
+        stripePaymentIntentId: {
+            type: String,
+        },
         activatedBy: {
             type: String,
-            enum: ['ADMIN', 'PAYMENT'],
+            enum: ['ADMIN', 'PAYMENT', 'STRIPE'],
             default: 'ADMIN',
         },
     },
