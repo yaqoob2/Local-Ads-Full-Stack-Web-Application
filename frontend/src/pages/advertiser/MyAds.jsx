@@ -6,6 +6,10 @@ const StatusBadge = ({ status }) => {
     switch (status) {
         case 'approved':
             return <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold uppercase tracking-wide">Approved</span>;
+        case 'PAID':
+            return <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold uppercase tracking-wide">Paid</span>;
+        case 'FAILED':
+            return <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold uppercase tracking-wide">Payment Failed</span>;
         case 'under_review':
             return <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold uppercase tracking-wide">Under Review</span>;
         case 'removed':
@@ -106,6 +110,28 @@ const MyAds = () => {
                                 </button>
                             ) : (
                                 <>
+                                    {(ad.paymentStatus === 'PENDING' || ad.paymentStatus === 'FAILED') && ad.planLevel !== 'BASIC' && (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const { createStripeSession } = await import('../../api/payment.api');
+                                                    const data = await createStripeSession(ad._id);
+                                                    if (data.url) {
+                                                        window.location.href = data.url;
+                                                    } else if (data.success) {
+                                                        alert(data.message);
+                                                        fetchMyAds();
+                                                    }
+                                                } catch (err) {
+                                                    console.error('Payment error:', err);
+                                                    alert('Failed to initiate payment');
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-bold transition-colors shadow-sm"
+                                        >
+                                            Pay & Publish
+                                        </button>
+                                    )}
                                     <Link
                                         to="/advertiser/create-ad"
                                         state={{ edit: true, adData: ad }}

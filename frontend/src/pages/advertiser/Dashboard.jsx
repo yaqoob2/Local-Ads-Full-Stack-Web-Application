@@ -68,17 +68,41 @@ const Dashboard = () => {
             </Link>
 
             {/* Top Greeting & Plan */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
-                        Welcome back, {user?.name || user?.username || 'user'}! 👋
+                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                        Welcome back, <span className="uppercase">{user?.profile?.fullName || user?.username || 'Advocate'}</span>! 👋
                     </h1>
-                    <p className="text-gray-500 text-sm mt-1">Here's what's happening with your ads today.</p>
+                    <p className="text-gray-500 mt-1 font-medium">Control your ads and monitor performance from one place.</p>
                 </div>
-                <div>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-                        ⭐ {user?.subscription?.plan || 'Free Plan'}
-                    </span>
+                <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-3">
+                        <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold tracking-wide uppercase transition-all shadow-sm ${user?.activeSubscription
+                            ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200'
+                            }`}>
+                            <span className="mr-2">⭐</span>
+                            {user?.activeSubscription?.plan?.name || 'Free Plan'}
+                        </span>
+
+                        {!user?.activeSubscription && (
+                            <Link
+                                to="/pricing"
+                                className="text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50 px-4 py-1.5 rounded-full border border-blue-100 transition-all hover:bg-blue-100"
+                            >
+                                Upgrade Now
+                            </Link>
+                        )}
+                    </div>
+                    {user?.activeSubscription && (
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                            Expires: {new Date(user.activeSubscription.endDate).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                            })}
+                        </p>
+                    )}
                 </div>
             </div>
 

@@ -1,25 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile } from '../../api/auth.api';
+import { getMySubscriptions, cancelSubscription } from '../../api/subscription.api';
 
 const UserProfile = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
+    const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [cancelling, setCancelling] = useState(false);
 
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
-                const userData = await getProfile();
+                const [userData, historyData] = await Promise.all([
+                    getProfile(),
+                    getMySubscriptions()
+                ]);
+
                 setUser({
                     ...userData,
-                    // Uppercase name as requested
                     displayName: (userData.profile?.fullName || userData.profile?.businessName || userData.username).toUpperCase(),
-                    // Show active if they have a sub OR if they are an advertiser (auto-active for demo)
-                    isSubscribed: !!userData.activeSubscription || userData.role === 'ADVERTISER',
-                    subscriptionPlan: userData.activeSubscription?.plan?.name || (userData.role === 'ADVERTISER' ? 'Growth' : 'Free')
+                    isSubscribed: !!userData.activeSubscription,
+                    subscriptionPlan: userData.activeSubscription?.plan?.name || 'Free Plan'
                 });
+                setHistory(historyData);
             } catch (err) {
                 console.error("Failed to fetch profile", err);
                 setError("Failed to load profile. Please try logging in again.");
@@ -38,6 +44,33 @@ const UserProfile = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('userRole');
         navigate('/login');
+    };
+
+    const handleCancelPlan = async () => {
+        if (!window.confirm('Are you sure you want to cancel your active subscription? You will lose premium benefits.')) return;
+
+        setCancelling(true);
+        try {
+            await cancelSubscription();
+            // Refresh data
+            const [userData, historyData] = await Promise.all([
+                getProfile(),
+                getMySubscriptions()
+            ]);
+            setUser({
+                ...userData,
+                displayName: (userData.profile?.fullName || userData.profile?.businessName || userData.username).toUpperCase(),
+                isSubscribed: !!userData.activeSubscription,
+                subscriptionPlan: userData.activeSubscription?.plan?.name || 'Free Plan'
+            });
+            setHistory(historyData);
+            alert('Subscription cancelled successfully.');
+        } catch (err) {
+            console.error('Cancellation failed', err);
+            alert('Failed to cancel subscription. Please contact support.');
+        } finally {
+            setCancelling(false);
+        }
     };
 
     if (loading) return (
@@ -69,8 +102,8 @@ const UserProfile = () => {
                 </div>
             </div>
 
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32 relative z-10">
-                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32 relative z-10">
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden text-gray-900">
                     <div className="md:flex">
                         {/* Sidebar / User Identity */}
                         <div className="md:w-1/3 bg-gray-900 text-white p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
@@ -107,46 +140,124 @@ const UserProfile = () => {
                             </div>
 
                             <div className="grid grid-cols-1 gap-6">
-                                {/* Contact Card */}
-                                <div className="p-6 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-md transition-shadow duration-300">
-                                    <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
-                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Email Address</h4>
-                                            <p className="text-lg font-medium text-gray-900">{user.email}</p>
-                                        </div>
+                                {/* Contact Card Info */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
+                                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Email Address</h4>
+                                        <p className="text-sm font-bold text-gray-900 truncate">{user.email}</p>
                                     </div>
-                                </div>
-
-                                <div className="p-6 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-md transition-shadow duration-300">
-                                    <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-indigo-100 text-indigo-600 rounded-lg">
-                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Phone Number</h4>
-                                            <p className="text-lg font-medium text-gray-900">{user.phone}</p>
-                                        </div>
+                                    <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
+                                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Phone Number</h4>
+                                        <p className="text-sm font-bold text-gray-900">{user.phone}</p>
                                     </div>
                                 </div>
 
                                 {/* Subscription Card */}
-                                <div className="p-6 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl text-white shadow-lg transform transition-transform duration-300 hover:scale-[1.02]">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-                                                <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                <div className="relative overflow-hidden p-8 bg-white rounded-3xl border border-gray-100 shadow-xl shadow-blue-50/50 group transition-all duration-500 hover:shadow-2xl hover:shadow-blue-100/50">
+                                    <div className="absolute -right-4 -top-4 w-32 h-32 bg-blue-50 rounded-full opacity-50 transition-transform duration-700 group-hover:scale-150"></div>
+
+                                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                        <div className="flex items-center gap-5">
+                                            <div className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 transform transition-transform duration-500 group-hover:rotate-6">
+                                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                </svg>
                                             </div>
-                                            <h4 className="text-lg font-bold">Current Plan</h4>
+                                            <div>
+                                                <h4 className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Membership Plan</h4>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-3xl font-black text-gray-900 tracking-tight uppercase">
+                                                        {user.subscriptionPlan}
+                                                    </span>
+                                                    {user.isSubscribed && <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <span className="text-2xl font-bold text-yellow-400">{user.subscriptionPlan}</span>
+
+                                        <div className="flex flex-col items-end gap-2 text-right">
+                                            {user.isSubscribed ? (
+                                                <>
+                                                    <div className="px-4 py-2 bg-green-50 text-green-700 rounded-xl text-xs font-bold uppercase tracking-tight border border-green-100">
+                                                        Status: Active
+                                                    </div>
+                                                    <button
+                                                        onClick={handleCancelPlan}
+                                                        disabled={cancelling}
+                                                        className="text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-tighter disabled:opacity-50 transition-colors"
+                                                    >
+                                                        {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    onClick={() => navigate('/pricing')}
+                                                    className="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                                                >
+                                                    Upgrade Now
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-white/10 rounded-full h-1.5 mb-2">
-                                        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 h-1.5 rounded-full" style={{ width: '75%' }}></div>
+
+                                    <div className="mt-8 relative h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
+                                        <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-1000 ease-out" style={{ width: user.isSubscribed ? '100%' : '10%' }}></div>
                                     </div>
-                                    <p className="text-xs text-white/60 text-right">Plan is active and running</p>
+                                    <div className="flex justify-between mt-3">
+                                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{user.isSubscribed ? 'Premium Access' : 'Limited Access'}</span>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                            {user.activeSubscription ? `Renews: ${new Date(user.activeSubscription.endDate).toLocaleDateString()}` : 'Free Forever'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Billing History Section */}
+                                <div className="mt-8">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                        Billing & Subscription History
+                                    </h3>
+
+                                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Date</th>
+                                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Plan</th>
+                                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</th>
+                                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Price</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {history.length > 0 ? history.map((sub) => (
+                                                    <tr key={sub._id} className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-600">
+                                                            {new Date(sub.createdAt).toLocaleDateString()}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-900">
+                                                            {sub.plan?.name || 'Starter'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${sub.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                                                                sub.status === 'CANCELLED' ? 'bg-yellow-100 text-yellow-700' :
+                                                                    'bg-gray-100 text-gray-700'
+                                                                }`}>
+                                                                {sub.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-blue-600">
+                                                            ₹{sub.plan?.price || 0}
+                                                        </td>
+                                                    </tr>
+                                                )) : (
+                                                    <tr>
+                                                        <td colSpan="4" className="px-6 py-10 text-center text-xs text-gray-400 italic">
+                                                            No transaction history found.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>

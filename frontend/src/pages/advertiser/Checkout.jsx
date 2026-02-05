@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCards, addCard } from '../../api/payment.api';
-import { createSubscription } from '../../api/subscription.api';
+import { createSubscription, createStripeSubscriptionSession } from '../../api/subscription.api';
+import LoadingButton from '../../components/LoadingButton';
 
 // Hardcoded plans matching Pricing.jsx
 const PLANS = [
@@ -15,19 +15,8 @@ const Checkout = () => {
     const navigate = useNavigate();
 
     const [plan, setPlan] = useState(null);
-    const [cards, setCards] = useState([]);
-    const [selectedCard, setSelectedCard] = useState(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
-    const [showAddCard, setShowAddCard] = useState(false);
-
-    // New Card Form State
-    const [newCardData, setNewCardData] = useState({
-        cardHolderName: '',
-        cardNumber: '',
-        expiryDate: '',
-        cvv: ''
-    });
 
     useEffect(() => {
         const foundPlan = PLANS.find(p => p._id === planId);
@@ -37,187 +26,109 @@ const Checkout = () => {
             return;
         }
         setPlan(foundPlan);
-        loadCards();
+        setLoading(false);
     }, [planId, navigate]);
 
-    const loadCards = async () => {
-        try {
-            const data = await getCards();
-            setCards(data);
-            if (data.length > 0) setSelectedCard(data[0]._id);
-        } catch (err) {
-            console.error('Failed to load cards', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleNewCardChange = (e) => {
-        setNewCardData({ ...newCardData, [e.target.name]: e.target.value });
-    };
-
-    const handleAddNewCard = async (e) => {
-        e.preventDefault();
-        try {
-            const addedCard = await addCard(newCardData);
-            setCards([addedCard, ...cards]);
-            setSelectedCard(addedCard._id);
-            setShowAddCard(false);
-            setNewCardData({ cardHolderName: '', cardNumber: '', expiryDate: '', cvv: '' });
-        } catch (err) {
-            alert('Failed to add card: ' + (err.response?.data?.message || err.message));
-        }
-    };
-
     const handlePayment = async () => {
-        if (!selectedCard && plan.price > 0) {
-            alert('Please select a payment method');
-            return;
-        }
-
         setProcessing(true);
         try {
-            // In a real app, we would pass cardId to the backend
-            // await createSubscription(planId, selectedCard);
-
-            // For this demo, we just create the subscription as before
-            await createSubscription(planId);
-
-            alert(`Successfully subscribed to ${plan.name} Plan!`);
-            navigate('/advertiser/dashboard');
+            if (plan.price === 0) {
+                // Free plan - direct activation
+                await createSubscription(planId);
+                alert(`Successfully subscribed to ${plan.name} Plan!`);
+                navigate('/advertiser/dashboard');
+            } else {
+                // Paid plan - Stripe Checkout Session
+                const data = await createStripeSubscriptionSession(planId);
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    throw new Error('Failed to get checkout URL from Stripe');
+                }
+            }
         } catch (err) {
             console.error(err);
-            alert('Payment Failed: ' + (err.response?.data?.message || 'Unknown error'));
+            alert('Payment Failed: ' + (err.response?.data?.message || err.message || 'Unknown error'));
         } finally {
             setProcessing(false);
         }
     };
 
-    if (loading || !plan) return <div className="p-20 text-center">Loading...</div>;
+    if (loading || !plan) return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+    );
 
     return (
-        <div className="max-w-3xl mx-auto px-4 py-12">
-            <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-xl mx-auto">
+                <div className="text-center mb-10">
+                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Checkout</h1>
+                    <p className="mt-2 text-sm text-gray-500">Review your order and proceed to secure payment.</p>
+                </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-                {/* Order Summary */}
-                <div>
-                    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 sticky top-24">
-                        <h2 className="text-xl font-semibold mb-4 text-gray-800">Order Summary</h2>
-                        <div className="flex justify-between items-center py-4 border-b border-gray-100">
-                            <div>
-                                <h3 className="font-bold text-lg">{plan.name} Plan</h3>
-                                <p className="text-sm text-gray-500">Duration: {plan.duration}</p>
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+                    {/* Order Summary Header */}
+                    <div className="bg-blue-600 px-8 py-6 text-white text-center">
+                        <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mb-1">Selected Plan</p>
+                        <h2 className="text-3xl font-black">{plan.name}</h2>
+                    </div>
+
+                    <div className="p-8">
+                        <div className="space-y-6">
+                            <div className="flex justify-between items-center py-4 border-b border-gray-50">
+                                <span className="text-gray-500 font-medium">Subscription Duration</span>
+                                <span className="text-gray-900 font-bold">{plan.duration}</span>
                             </div>
-                            <div className="text-xl font-bold">₹{plan.price}</div>
-                        </div>
-                        <div className="flex justify-between items-center py-4 text-lg font-bold">
-                            <span>Total</span>
-                            <span>₹{plan.price}</span>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Payment Section */}
-                <div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <h2 className="text-xl font-semibold mb-6">Payment Method</h2>
+                            <div className="flex justify-between items-center py-4 border-b border-gray-50">
+                                <span className="text-gray-500 font-medium">Subtotal</span>
+                                <span className="text-gray-900 font-bold">₹{plan.price}</span>
+                            </div>
 
-                        {/* Saved Cards List */}
-                        <div className="space-y-4 mb-6">
-                            {cards.map(card => (
-                                <div
-                                    key={card._id}
-                                    onClick={() => setSelectedCard(card._id)}
-                                    className={`p-4 rounded-lg border-2 cursor-pointer flex items-center justify-between transition-all ${selectedCard === card._id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                            <div className="flex justify-between items-center py-6">
+                                <span className="text-xl font-bold text-gray-900">Total Amount</span>
+                                <span className="text-3xl font-black text-blue-600">₹{plan.price}</span>
+                            </div>
+
+                            <div className="pt-4">
+                                <LoadingButton
+                                    onClick={handlePayment}
+                                    loading={processing}
+                                    variant="primary"
+                                    className="w-full py-4 text-lg font-bold shadow-lg shadow-blue-200"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedCard === card._id ? 'border-blue-600' : 'border-gray-400'}`}>
-                                            {selectedCard === card._id && <div className="w-2 h-2 rounded-full bg-blue-600"></div>}
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-gray-800">**** {card.cardNumber.slice(-4)}</p>
-                                            <p className="text-xs text-gray-500">Expires {card.expiryDate}</p>
-                                        </div>
-                                    </div>
-                                    <span className="font-mono font-bold text-gray-400">{card.type}</span>
-                                </div>
-                            ))}
+                                    Proceed to Payment
+                                </LoadingButton>
+                            </div>
 
-                            {cards.length === 0 && !showAddCard && (
-                                <p className="text-gray-500/70 text-center py-4">No saved cards found.</p>
-                            )}
+                            <div className="flex flex-col items-center gap-4 mt-8 pt-6 border-t border-gray-50">
+                                <div className="flex items-center gap-3 grayscale opacity-50">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Powered by Stripe</span>
+                                    <div className="h-5 w-px bg-gray-200"></div>
+                                    <div className="flex gap-2">
+                                        <div className="w-6 h-4 bg-gray-200 rounded-sm"></div>
+                                        <div className="w-6 h-4 bg-gray-200 rounded-sm"></div>
+                                        <div className="w-6 h-4 bg-gray-200 rounded-sm"></div>
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-gray-400 text-center uppercase tracking-tighter">
+                                    Your payment details are encrypted and securely processed by Stripe.
+                                    LocalAds does not store your card information.
+                                </p>
+                            </div>
                         </div>
-
-                        {/* Add New Card Toggle */}
-                        {!showAddCard ? (
-                            <button
-                                onClick={() => setShowAddCard(true)}
-                                className="text-blue-600 font-semibold hover:underline flex items-center gap-2 mb-6"
-                            >
-                                + Add New Card
-                            </button>
-                        ) : (
-                            <form onSubmit={handleAddNewCard} className="bg-gray-50 p-4 rounded-lg mb-6 animate-fade-in">
-                                <h3 className="font-bold text-sm mb-3">New Card Details</h3>
-                                <div className="space-y-3">
-                                    <input
-                                        name="cardHolderName"
-                                        placeholder="Card Holder Name"
-                                        value={newCardData.cardHolderName}
-                                        onChange={handleNewCardChange}
-                                        className="w-full p-2 border rounded text-sm"
-                                        required
-                                    />
-                                    <input
-                                        name="cardNumber"
-                                        placeholder="Card Number"
-                                        value={newCardData.cardNumber}
-                                        onChange={handleNewCardChange}
-                                        className="w-full p-2 border rounded text-sm"
-                                        maxLength="16"
-                                        required
-                                    />
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <input
-                                            name="expiryDate"
-                                            placeholder="MM/YY"
-                                            value={newCardData.expiryDate}
-                                            onChange={handleNewCardChange}
-                                            className="w-full p-2 border rounded text-sm"
-                                            required
-                                        />
-                                        <input
-                                            name="cvv"
-                                            type="password"
-                                            placeholder="CVV"
-                                            value={newCardData.cvv}
-                                            onChange={handleNewCardChange}
-                                            className="w-full p-2 border rounded text-sm"
-                                            maxLength="4"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 pt-2">
-                                        <button type="submit" className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-medium">Save</button>
-                                        <button type="button" onClick={() => setShowAddCard(false)} className="text-gray-500 px-3 py-1.5 text-sm">Cancel</button>
-                                    </div>
-                                </div>
-                            </form>
-                        )}
-
-                        <button
-                            onClick={handlePayment}
-                            disabled={processing}
-                            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                        >
-                            {processing ? 'Processing Payment...' : `Pay ₹${plan.price} & Subscribe`}
-                        </button>
-                        <p className="text-center text-xs text-gray-400 mt-4">
-                            Secure Payment via LocalAds Demo Gateway
-                        </p>
                     </div>
                 </div>
+
+                <button
+                    onClick={() => navigate('/pricing')}
+                    className="mt-8 flex items-center justify-center gap-2 w-full text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                    Back to Plans
+                </button>
             </div>
         </div>
     );

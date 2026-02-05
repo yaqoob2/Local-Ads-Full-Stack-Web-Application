@@ -33,3 +33,13 @@ export const activateSubscription = async (userId, planId, durationInDays) => {
     const response = await client.post('/admin/subscriptions/activate', { userId, planId, durationInDays });
     return response.data;
 };
+
+export const getAllSubscriptions = async () => {
+    const response = await client.get('/admin/subscriptions');
+    return response.data;
+};
+
+export const getAdminStats = async () => {
+    const response = await client.get('/admin/stats');
+    return response.data;
+};
